@@ -44,6 +44,19 @@ const int pwmChannel = 0;
 const int resolution = 8;
 int dutyCycle = 0;//enable is active low so lower dutycycle (0-255) means more power
 
+//states
+enum MachineState {
+  CLOCK,
+  ALARM,
+  TEST
+};
+MachineState currentState;
+enum EditState {
+  NOT,
+  HOUR,
+  MINUTE
+};
+EditState currentEditState;
 
 void setup() {
   //Motor pins:
@@ -64,7 +77,9 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(button2Pin), buttonPressed, FALLING); 
   pinMode(button3Pin, INPUT_PULLUP); 
   attachInterrupt(digitalPinToInterrupt(button3Pin), buttonPressed, FALLING); 
-
+  //menu
+  currentState = CLOCK;
+  currentEditState = NOT;
   //limit switches 
 
   //OLED display
@@ -90,7 +105,7 @@ void setup() {
   delay(1000);
   display.println("Hello, world2!");
   display.display();
-
+/*
   brakeMotor();
   delay(1000);
   spinMotor(true);
@@ -100,14 +115,60 @@ void setup() {
   spinMotor(false);
   delay(2000);
   brakeMotor();
+  */
 }
   
 void loop() {
-  //Serial.println("loop");
-  //delay(1000);
-  // put your main code here, to run repeatedly:
+  int currentTime = startTime+millis()/ 1000; // Convert milliseconds to seconds
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0,0);
+
+  switch (currentState) {
+    case CLOCK://just display time
+      if(currentEditState==NOT)
+      {
+        display.println("Not editing");
+        display.println("Press UP to edit");
+        displayTime(currentTime);
+      }
+      else if(currentEditState){
+        display.println("Editing hours");
+        display.println("Press Right to edit minutes");
+        displayTime(currentTime);
+      }
+      display.clearDisplay();
+      displayTime(currentTime);
+      if (button0Flag) {
+        Serial.println("button0");
+        button0Flag = false;
+      }
+      if (button1Flag) {
+        Serial.println("button1"); 
+        button1Flag = false;
+      }
+      if (button2Flag) {
+        Serial.println("button2");
+        button2Flag = false;
+      }
+      if (button3Flag) {
+        Serial.println("button3");
+        button3Flag = false;
+        
+      }
+      break;
+
+    case ALARM:
+      // Code for the EDIT state
+      break;
+
+    case TEST:
+      // Code for the DEFAULT state
+      break;
+  }
   
-  int currentTime = millis() / 1000; // Convert milliseconds to seconds
+  /*
   //displayTime(currentTime);
   // Check if the current time has reached the alarm time
   if (currentTime >= alarmTime) {
@@ -126,19 +187,20 @@ void loop() {
     button0Flag = false;
   }
   //ToDo write functions for other 3 buttons
+  */
+ display.display();
 }
 
 // put function definitions here:
 void displayTime(int currentTime) {
-  display.clearDisplay();
-  display.setTextSize(1);
+  
+  /*display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0,0);
+  display.setCursor(0,0);*/
 
-  int hours = currentTime / 3600;
+  int hours = (currentTime / 3600)%24;
   int minutes = (currentTime % 3600) / 60;
-  int seconds = currentTime % 60;
-
+  int seconds =(currentTime %60);
   display.print("Time: ");
   display.print(hours);
   display.print(":");
@@ -147,15 +209,20 @@ void displayTime(int currentTime) {
   display.print(":");
   if (seconds < 10) display.print("0");
   display.print(seconds);
+  
+  /*
   display.print("\nAlarm at: ");
   display.print(alarmTime/3600);
   display.print(":");
   display.print((alarmTime % 3600) / 60);
   display.print(":");
   display.print(alarmTime % 60);
-
-  display.display();
+*/
+  
+  //display.display();
 }
+
+
 
 void spinMotor(bool forwards){
   if (forwards){
