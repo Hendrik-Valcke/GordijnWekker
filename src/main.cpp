@@ -19,8 +19,8 @@ void spinMotor(bool);
 void brakeMotor();
 //timer
 int startTime = 22*60*60;
-const int alarmDuration = 0.5*60;//0.5 minutes
 int alarmTime;
+bool alarmed= false;
 //OLED display
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 //menu buttons, 0=UP, 1= RIGHT, 2=LEFT,3=DOWN
@@ -87,7 +87,7 @@ void setup() {
   Serial.println("Start setup");
 
   //timer
-  alarmTime = startTime + alarmDuration;  
+  alarmTime = startTime +60*60;  
   printf("alarmtime= %d\n",alarmTime);
 
   //display
@@ -120,6 +120,10 @@ void setup() {
   
 void loop() {
   int currentTime = startTime+millis()/ 1000; // Convert milliseconds to seconds
+  if (alarmed==true && currentTime%(24*60*60)<alarmTime%(24*60*60))
+  {
+    alarmed=false;
+  }
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
@@ -131,13 +135,13 @@ void loop() {
       {
         display.println("CLOCK mode");
         displayTime(currentTime);
-        display.println(" ");
         display.println("RIGHT to edit time");
-        display.println("DOWN to change modes");
+        display.println("UP/DOWN to change modes");
         if (button0Flag) {
           Serial.println("button0");
           delay(250);
           button0Flag = false;
+          currentState=TEST;
         }
         if (button1Flag) {
           Serial.println("button1"); //right
@@ -161,9 +165,9 @@ void loop() {
       }
       else if(currentEditState==HOUR){
         display.println("CLOCK mode");
+        displayTime(currentTime); 
         display.println("Editing hours");
         display.println("RIGHT to edit minutes, LEFT to exit edit mode");
-        displayTime(currentTime);
         if (button0Flag) {
           Serial.println("button0");//up
           delay(250);
@@ -197,9 +201,9 @@ void loop() {
       }
       else if(currentEditState==MINUTE){
         display.println("CLOCK mode");
+        displayTime(currentTime); 
         display.println("Editing minutes");
-        display.println("Press LEFT to edit hours, RIGHT to exit edit mode");
-        displayTime(currentTime);        
+        display.println("Press LEFT to edit hours, RIGHT to exit edit mode");               
         if (button0Flag) {
           Serial.println("button0");//up
           delay(250);
@@ -230,17 +234,158 @@ void loop() {
           }      
         }
         break;
-      }
-      //display.clearDisplay();
-      //displayTime(currentTime);
-      
+      }      
 
     case ALARM:
-      // Code for the EDIT state
+      if(currentEditState==NOT)
+      {
+        display.println("ALARM mode");
+        display.print("CLOCK: ");
+        displayTime(currentTime);
+        display.print("ALARM: ");
+        displayTime(alarmTime);
+        display.println(" ");
+        display.println("RIGHT to edit alarm time");
+        display.println("UP/DOWN to change modes");
+        
+        if (button0Flag) {
+          Serial.println("button0");
+          delay(250);
+          button0Flag = false;
+          currentState=CLOCK;
+        }
+        if (button1Flag) {
+          Serial.println("button1"); //right
+          delay(250);
+          button1Flag = false;
+          currentEditState=HOUR;
+        }
+        if (button2Flag) {
+          Serial.println("button2");
+          delay(250);
+          button2Flag = false;
+        }
+        if (button3Flag) {
+          Serial.println("button3");//down
+          delay(250);
+          button3Flag = false;
+          currentState=TEST;          
+        }
+        if((currentTime%(24*60*60))>=(alarmTime%(24*60*60))&&alarmed==false)
+        {
+          alarmed = true;
+          spinMotor(true);
+          delay(5000);
+          brakeMotor();
+        }
+        break;
+      }
+      else if(currentEditState==HOUR){
+        display.println("ALARM mode");
+        display.print("alarm time: ");
+        displayTime(alarmTime); 
+        display.println("Editing hours");
+        display.println("RIGHT to edit minutes, LEFT to exit editmode");
+        if (button0Flag) {
+          Serial.println("button0");//up
+          delay(250);
+          button0Flag = false;
+          alarmTime=alarmTime+60*60;
+        }
+        if (button1Flag) {
+          Serial.println("button1"); //right
+          delay(250);
+          button1Flag = false;
+          currentEditState=MINUTE;
+        }
+        if (button2Flag) {
+          Serial.println("button2");//left
+          delay(250);
+          button2Flag = false;
+          currentEditState=NOT;
+        }
+        if (button3Flag) {
+          Serial.println("button3");//down
+          delay(250);
+          button3Flag = false;          
+          if(alarmTime-60*60<0)
+          {
+            alarmTime=alarmTime+23*60*60;
+          }else{
+            alarmTime=alarmTime-60*60; 
+          }      
+        }
+        break;
+      }
+      else if(currentEditState==MINUTE){
+        display.println("ALARM mode");
+        display.print("alarm time: ");
+        displayTime(alarmTime); 
+        display.println("Editing minutes");
+        display.println("LEFT to edit hours, RIGHT to exit editmode");
+        if (button0Flag) {
+          Serial.println("button0");//up
+          delay(250);
+          button0Flag = false;
+          alarmTime=alarmTime+60;
+        }
+        if (button1Flag) {
+          Serial.println("button1"); //right
+          delay(250);
+          button1Flag = false;
+          currentEditState=NOT;
+        }
+        if (button2Flag) {
+          Serial.println("button2");//left
+          delay(250);
+          button2Flag = false;
+          currentEditState=HOUR;
+        }
+        if (button3Flag) {
+          Serial.println("button3");//down
+          delay(250);
+          button3Flag = false;          
+          if(alarmTime-60<0)
+          {
+            alarmTime=alarmTime+24*60*60-60;
+          }else{
+            alarmTime=alarmTime-60; 
+          }      
+        }
+        break;
+      }
       break;
 
     case TEST:
-      // Code for the DEFAULT state
+      display.println("RIGHT to close curtain");
+      display.println("UP/DOWN to change modes");
+      if (button0Flag) {
+          Serial.println("button0");
+          delay(250);
+          button0Flag = false;
+          currentState=ALARM;
+        }
+        if (button1Flag) {
+          Serial.println("button1"); //right
+          delay(250);
+          button1Flag = false;
+          spinMotor(false);
+          delay(5000);
+          brakeMotor();
+
+        }
+        if (button2Flag) {
+          Serial.println("button2");
+          delay(250);
+          button2Flag = false;
+        }
+        if (button3Flag) {
+          Serial.println("button3");//down
+          delay(250);
+          button3Flag = false;
+          currentState=CLOCK;          
+        }
+        
       break;
   }
   
@@ -268,7 +413,7 @@ void displayTime(int currentTime) {
   int hours = (currentTime / 3600)%24;
   int minutes = (currentTime % 3600) / 60;
   int seconds =(currentTime %60);
-  display.print("Time: ");
+  //display.print("Time: ");
   display.print(hours);
   display.print(":");
   if (minutes < 10) display.print("0");
@@ -276,6 +421,7 @@ void displayTime(int currentTime) {
   display.print(":");
   if (seconds < 10) display.print("0");
   display.print(seconds);
+  display.println();
   
   /*
   display.print("\nAlarm at: ");
